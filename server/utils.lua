@@ -1,36 +1,24 @@
 QBCore = exports['qb-core']:GetCoreObject()
 
-TimeoutCallbacks          = {}
+TimeoutCount = -1
+CancelledTimeouts = {}
 
 setTimeout = function(msec, cb)
-	table.insert(TimeoutCallbacks, {
-		time = GetGameTimer() + msec,
-		cb   = cb
-	})
-	return #TimeoutCallbacks
+    local id = TimeoutCount + 1
+    SetTimeout(msec, function()
+        if CancelledTimeouts[id] then
+            CancelledTimeouts[id] = nil
+        else
+            cb()
+        end
+    end)
+    TimeoutCount = id
+    return id
 end
 
-clearTimeout = function(i)
-	TimeoutCallbacks[i] = nil
+clearTimeout = function(id)
+    CancelledTimeouts[id] = true
 end
-
--- SetTimeout
-Citizen.CreateThread(function()
-	while true do
-		local sleep = 100
-		if #TimeoutCallbacks > 0 then
-			local currTime = GetGameTimer()
-			sleep = 0
-			for i=1, #TimeoutCallbacks, 1 do
-				if currTime >= TimeoutCallbacks[i].time then
-					TimeoutCallbacks[i].cb()
-					TimeoutCallbacks[i] = nil
-				end
-			end
-		end
-		Citizen.Wait(sleep)
-	end
-end)
 
 function canCarryItems(id, item, amount)
 	local xPlayer = QBCore.Functions.GetPlayer(id)
